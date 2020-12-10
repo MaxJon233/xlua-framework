@@ -124,7 +124,7 @@ namespace AssetBundles
         {
             var instance = AssetBundleManager.Instance;
             var abRefrences = instance.GetAssetBundleRefrences(assetbundleName);
-            var webRequestRefrences = instance.GetWebRequesterRefrences(assetbundleName);
+            var webRequestRefrences = instance.GetAssetBundleRequesterRefrences(assetbundleName);
             var abLoaderRefrences = instance.GetAssetBundleLoaderRefrences(assetbundleName);
             var expanded = false;
 

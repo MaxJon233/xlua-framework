@@ -39,16 +39,16 @@ public class GameLaunch : MonoBehaviour
         Logger.Log(string.Format("AssetBundleManager Initialize use {0}ms", (DateTime.Now - start).Milliseconds));
 
         // 启动xlua热修复模块
-        start = DateTime.Now;
-        XLuaManager.Instance.Startup();
-        string luaAssetbundleName = XLuaManager.Instance.AssetbundleName;
-        AssetBundleManager.Instance.SetAssetBundleResident(luaAssetbundleName, true);
-        var abloader = AssetBundleManager.Instance.LoadAssetBundleAsync(luaAssetbundleName);
-        yield return abloader;
-        abloader.Dispose();
-        XLuaManager.Instance.OnInit();
-        XLuaManager.Instance.StartHotfix();
-        Logger.Log(string.Format("XLuaManager StartHotfix use {0}ms", (DateTime.Now - start).Milliseconds));
+        //start = DateTime.Now;
+        //XLuaManager.Instance.Startup();
+        //string luaAssetbundleName = XLuaManager.Instance.AssetbundleName;
+        //AssetBundleManager.Instance.SetAssetBundleResident(luaAssetbundleName, true);
+        //var abloader = AssetBundleManager.Instance.LoadAssetBundleAsync(luaAssetbundleName);
+        //yield return abloader;
+        //abloader.Dispose();
+        //XLuaManager.Instance.OnInit();
+        //XLuaManager.Instance.StartHotfix();
+        //Logger.Log(string.Format("XLuaManager StartHotfix use {0}ms", (DateTime.Now - start).Milliseconds));
 
         // 初始化UI界面
         yield return InitLaunchPrefab();

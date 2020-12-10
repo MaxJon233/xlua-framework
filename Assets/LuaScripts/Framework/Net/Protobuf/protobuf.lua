@@ -302,7 +302,6 @@ local function _AttachFieldHelpers(message_meta, field_descriptor)
     rawset(field_descriptor, "_encoder", TYPE_TO_ENCODER[field_descriptor.type](field_descriptor.number, is_repeated, is_packed))
     rawset(field_descriptor, "_sizer", TYPE_TO_SIZER[field_descriptor.type](field_descriptor.number, is_repeated, is_packed))
     rawset(field_descriptor, "_default_constructor", _DefaultValueConstructorForField(field_descriptor))
-
     local AddDecoder = function(wiretype, is_packed)
         local tag_bytes = encoder.TagBytes(field_descriptor.number, wiretype)
         message_meta._decoders_by_tag[tag_bytes] = TYPE_TO_DECODER[field_descriptor.type](field_descriptor.number, is_repeated, is_packed, field_descriptor, field_descriptor._default_constructor)
@@ -327,6 +326,7 @@ local function _InitMethod(message_meta)
         local self = {}
         self._cached_byte_size = 0
         self._cached_byte_size_dirty = false
+        self._is_null = false
         self._fields = {}
         self._is_present_in_parent = false
         self._listener = listener_mod.NullMessageListener()
@@ -343,12 +343,15 @@ local function _AddPropertiesForRepeatedField(field, message_meta)
         if field_value == nil then
             field_value = field._default_constructor(self)
             self._fields[field] = field_value
-
             if not self._cached_byte_size_dirty then
                 message_meta._member._Modified(self)
             end
+            field_value._is_null = true
+            return field_value
+        else
+            field_value._is_null = false
+            return field_value
         end
-        return field_value
     end
 
     message_meta._setter[property_name] = function(self)
@@ -366,12 +369,16 @@ local function _AddPropertiesForNonRepeatedCompositeField(field, message_meta)
             field_value = message_type._concrete_class()
             field_value:_SetListener(self._listener_for_children)            
             self._fields[field] = field_value
-
             if not self._cached_byte_size_dirty then
                 message_meta._member._Modified(self)
             end
+            field_value._is_null = true
+            return field_value
+        else
+            field_value._is_null = false
+            return field_value
         end
-        return field_value
+
     end
     message_meta._setter[property_name] = function(self, new_value)
         error('Assignment not allowed to composite field' .. property_name .. 'in protocol message object.' )

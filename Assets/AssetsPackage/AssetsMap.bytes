@@ -1,3 +1,4 @@
+assetsmap_bytes.assetbundle,AssetsMap.bytes
 effect/common.assetbundle,Effect/Common/Materials/models_fx_R.mat
 effect/common.assetbundle,Effect/Common/Materials/models_fx_RGB.mat
 effect/common.assetbundle,Effect/Common/Texture/Matcap_Encode2.png
@@ -39,9 +40,6 @@ lua.assetbundle,Lua/Common/Tools/UnityEngine/Vector2.lua.bytes
 lua.assetbundle,Lua/Common/Tools/UnityEngine/Vector3.lua.bytes
 lua.assetbundle,Lua/Common/Tools/UnityEngine/Vector4.lua.bytes
 lua.assetbundle,Lua/Common/Tools/utf8.lua.bytes
-lua.assetbundle,Lua/Config/Data/Server.lua.bytes
-lua.assetbundle,Lua/Config/Data/ServerAreaLang.lua.bytes
-lua.assetbundle,Lua/Config/Data/ServerLang.lua.bytes
 lua.assetbundle,Lua/Config/LangUtil.lua.bytes
 lua.assetbundle,Lua/DataCenter/ClientData/ClientData.lua.bytes
 lua.assetbundle,Lua/DataCenter/Config/DataMessageNames.lua.bytes
@@ -174,6 +172,9 @@ lua.assetbundle,Lua/XLua/HotfixMain.lua.bytes
 lua.assetbundle,Lua/XLua/Perf/memory.lua.bytes
 lua.assetbundle,Lua/XLua/Perf/profiler.lua.bytes
 lua.assetbundle,Lua/XLua/Tdr/tdr.lua.bytes
+luadata.assetbundle,LuaData/Config/Data/Server.lua.bytes
+luadata.assetbundle,LuaData/Config/Data/ServerAreaLang.lua.bytes
+luadata.assetbundle,LuaData/Config/Data/ServerLang.lua.bytes
 models/1001.assetbundle,Models/1001/Character.prefab
 shaders.assetbundle,Shaders/Model/Particles-Add-R.shader
 shaders.assetbundle,Shaders/Model/Particles-Add-RGBA.shader
@@ -366,3 +367,4 @@ ui/prefabs/view/uiloading_prefab.assetbundle,UI/Prefabs/View/UILoading.prefab
 ui/prefabs/view/uilogin_prefab.assetbundle,UI/Prefabs/View/UILogin.prefab
 ui/prefabs/view/uiloginserver_prefab.assetbundle,UI/Prefabs/View/UILoginServer.prefab
 ui/prefabs/view/uitestmain_prefab.assetbundle,UI/Prefabs/View/UITestMain.prefab
+variantsmap_bytes.assetbundle,VariantsMap.bytes

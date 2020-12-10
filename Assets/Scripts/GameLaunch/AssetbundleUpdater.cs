@@ -18,8 +18,10 @@ public class AssetbundleUpdater : MonoBehaviour
 {
     static int MAX_DOWNLOAD_NUM = 5;
     static int UPDATE_SIZE_LIMIT = 5 * 1024 * 1024;
-    static string APK_FILE_PATH = "/xluaframework_{0}_{1}.apk";
-    
+    static string APK_FILE_PATH = "/zhenhunjie_{0}_{1}.apk";
+
+    static bool IGNORE_UPDATE = false;
+
     string resVersionPath = null;
     string noticeVersionPath = null;
     string clientAppVersion = null;
@@ -47,11 +49,11 @@ public class AssetbundleUpdater : MonoBehaviour
 
 #if UNITY_EDITOR || CLIENT_DEBUG
     // Hotfix测试---用于测试热更模块的热修复
-    [LuaCallCSharp]
-    public void TestHotfix()
-    {
-        Logger.Log("********** AssetbundleUpdater : Call TestHotfix in cs...");
-    }
+    //[LuaCallCSharp]
+    //public void TestHotfix()
+    //{
+    //    Logger.Log("********** AssetbundleUpdater : Call TestHotfix in cs...");
+    //}
 #endif
 
     void Awake()
@@ -61,7 +63,7 @@ public class AssetbundleUpdater : MonoBehaviour
         slider.gameObject.SetActive(false);
     }
 
-    void Start ()
+    void Start()
     {
         resVersionPath = AssetBundleUtility.GetPersistentDataPath(BuildUtils.ResVersionFileName);
         noticeVersionPath = AssetBundleUtility.GetPersistentDataPath(BuildUtils.NoticeVersionFileName);
@@ -75,7 +77,7 @@ public class AssetbundleUpdater : MonoBehaviour
     {
         StartCoroutine(CheckUpdateOrDownloadGame());
 #if UNITY_EDITOR || CLIENT_DEBUG
-        TestHotfix();
+        //TestHotfix();
 #endif
     }
 
@@ -99,8 +101,7 @@ public class AssetbundleUpdater : MonoBehaviour
             // EditorMode总是跳过资源更新
             yield return StartGame();
             yield break;
-        }
-        else
+        } else
         {
 #if UNITY_5_5
             // 说明：亲测在Unity5.5版本本地服务器根本无法连接，倒是在手机上正常
@@ -111,29 +112,35 @@ public class AssetbundleUpdater : MonoBehaviour
         }
 #endif
 
-        // 获取服务器地址，并检测大版本更新、资源更新
-        bool isInternalVersion = ChannelManager.instance.IsInternalVersion();
-        serverAppVersion = clientAppVersion;
-        serverResVersion = clientResVersion;
-        yield return GetUrlListAndCheckUpdate(isInternalVersion);
-        
-        // 执行大版本更新、资源更新
-        if (needDownloadGame)
+        if (IGNORE_UPDATE)
         {
-            UINoticeTip.Instance.ShowOneButtonTip("游戏下载", "需要下载新的游戏版本！", "确定", null);
-            yield return UINoticeTip.Instance.WaitForResponse();
-            yield return DownloadGame();
-        }
-        else if (needUpdateGame)
-        {
-            yield return CheckGameUpdate(isInternalVersion);
+            serverAppVersion = clientAppVersion;
+            serverResVersion = clientResVersion;
             yield return StartGame();
-        }
-        else
+        } else
         {
-            yield return StartGame();
-        }
+            // 获取服务器地址，并检测大版本更新、资源更新
+            bool isInternalVersion = ChannelManager.instance.IsInternalVersion();
+            serverAppVersion = clientAppVersion;
+            serverResVersion = clientResVersion;
+            yield return GetUrlListAndCheckUpdate(isInternalVersion);
 
+            // 执行大版本更新、资源更新
+            if (needDownloadGame)
+            {
+                UINoticeTip.Instance.ShowOneButtonTip("游戏下载", "需要下载新的游戏版本！", "确定", null);
+                yield return UINoticeTip.Instance.WaitForResponse();
+                yield return DownloadGame();
+            } else if (needUpdateGame)
+            {
+                yield return CheckGameUpdate(isInternalVersion);
+                yield return StartGame();
+            } else
+            {
+                yield return StartGame();
+            }
+
+        }
         yield break;
     }
 
@@ -141,16 +148,25 @@ public class AssetbundleUpdater : MonoBehaviour
     {
         statusText.text = "正在准备资源...";
 #if UNITY_EDITOR || CLIENT_DEBUG
-        AssetBundleManager.Instance.TestHotfix();
+        // AssetBundleManager.Instance.TestHotfix();
 #endif
         Logger.clientVerstion = clientAppVersion;
         ChannelManager.instance.resVersion = serverResVersion;
+        // 启动xlua热修复模块
+        XLuaManager.Instance.Startup();
+        // 重启Lua虚拟机
+        Coroutine co = StartCoroutine(AssetBundleManager.Instance.PreLoadLua());
+        yield return co;
+        XLuaManager.Instance.OnInit();
 
+        XLuaManager.Instance.StartHotfix();
         XLuaManager.Instance.StartGame();
         CustomDataStruct.Helper.Startup();
         UINoticeTip.Instance.DestroySelf();
         Destroy(gameObject, 0.5f);
-
+#if UNITY_EDITOR || CLIENT_DEBUG
+        //TestHotfix();
+#endif
         yield break;
     }
     #endregion
@@ -169,20 +185,18 @@ public class AssetbundleUpdater : MonoBehaviour
         if (string.IsNullOrEmpty(persistentResVersion))
         {
             clientResVersion = streamingResVersion;
-        }
-        else
+        } else
         {
             clientResVersion = BuildUtils.CheckIsNewVersion(streamingResVersion, persistentResVersion) ? persistentResVersion : streamingResVersion;
         }
-        
+
         GameUtility.SafeWriteAllText(resVersionPath, clientResVersion);
 
         var persistentNoticeVersion = GameUtility.SafeReadAllText(noticeVersionPath);
         if (!string.IsNullOrEmpty(persistentNoticeVersion))
         {
             ChannelManager.instance.noticeVersion = persistentNoticeVersion;
-        }
-        else
+        } else
         {
             ChannelManager.instance.noticeVersion = "1.0.0";
         }
@@ -210,14 +224,13 @@ public class AssetbundleUpdater : MonoBehaviour
 
     #region 服务器地址获取以及检测版本更新
 
-    IEnumerator GetUrlListAndCheckUpdate(bool isInternalVersion)
+    IEnumerator GetUrlListAndCheckUpdate( bool isInternalVersion )
     {
         if (isInternalVersion)
         {
             // 内部版本使用本地服务器更新
             yield return InternalGetUrlList();
-        }
-        else
+        } else
         {
             // 外部版本一律使用外网服务器更新
             yield return OutnetGetUrlList();
@@ -260,8 +273,7 @@ public class AssetbundleUpdater : MonoBehaviour
         {
             // 内部版本总是检测资源更新，避免开发过程中需要频繁升级资源版本号
             needUpdateGame = true;
-        }
-        else
+        } else
         {
             // 外部版本对比版本号更新
             needUpdateGame = BuildUtils.CheckIsNewVersion(clientResVersion, serverResVersion);
@@ -359,7 +371,8 @@ public class AssetbundleUpdater : MonoBehaviour
 
         bool GetUrlListComplete = false;
         WWW www = null;
-        SimpleHttp.HttpPost(URLSetting.START_UP_URL, null, DataUtils.StringToBytes(args), (WWW wwwInfo) => {
+        SimpleHttp.HttpPost(URLSetting.START_UP_URL, null, DataUtils.StringToBytes(args), ( WWW wwwInfo ) =>
+        {
             www = wwwInfo;
             GetUrlListComplete = true;
         });
@@ -367,7 +380,7 @@ public class AssetbundleUpdater : MonoBehaviour
         {
             return GetUrlListComplete;
         });
-        
+
         if (www == null || !string.IsNullOrEmpty(www.error) || www.bytes == null || www.bytes.Length == 0)
         {
             Logger.LogError("Get url list for args {0} with err : {1}", args, www == null ? "www null" : (!string.IsNullOrEmpty(www.error) ? www.error : "bytes length 0"));
@@ -413,15 +426,14 @@ public class AssetbundleUpdater : MonoBehaviour
         if (urlList.ContainsKey("app") && !string.IsNullOrEmpty(urlList["app"].ToString()))
         {
             URLSetting.APP_DOWNLOAD_URL = urlList["app"].ToString();
-        }
-        else if (urlList.ContainsKey("res") && !string.IsNullOrEmpty(urlList["res"].ToString()))
+        } else if (urlList.ContainsKey("res") && !string.IsNullOrEmpty(urlList["res"].ToString()))
         {
             URLSetting.SERVER_RESOURCE_URL = urlList["res"].ToString();
         }
         yield break;
     }
     #endregion
-    
+
     #region 游戏下载
     IEnumerator DownloadGame()
     {
@@ -433,7 +445,7 @@ public class AssetbundleUpdater : MonoBehaviour
         }
         DownloadGameForAndroid();
 #elif UNITY_IPHONE
-        ChannelManager.instance.StartDownLoadGame(URLSetting.APP_DOWNLOAD_URL);
+        ChannelManager.instance.StartDownloadGame(URLSetting.APP_DOWNLOAD_URL);
 #endif
         yield break;
     }
@@ -447,7 +459,7 @@ public class AssetbundleUpdater : MonoBehaviour
 
         string saveName = string.Format(APK_FILE_PATH, ChannelManager.instance.channelName, serverAppVersion);
         Logger.Log(string.Format("Download game : {0}", saveName));
-        ChannelManager.instance.StartDownloadGame(URLSetting.APP_DOWNLOAD_URL, DownloadGameSuccess, DownloadGameFail, (int progress) =>
+        ChannelManager.instance.StartDownloadGame(URLSetting.APP_DOWNLOAD_URL, DownloadGameSuccess, DownloadGameFail, ( int progress ) =>
         {
             slider.normalizedValue = progress;
         }, saveName);
@@ -470,7 +482,7 @@ public class AssetbundleUpdater : MonoBehaviour
     }
 #endif
 
-    private bool ShowUpdatePrompt(int downloadSize)
+    private bool ShowUpdatePrompt( int downloadSize )
     {
         if (UPDATE_SIZE_LIMIT <= 0 && Application.internetReachability == NetworkReachability.ReachableViaLocalAreaNetwork)
         {
@@ -488,16 +500,16 @@ public class AssetbundleUpdater : MonoBehaviour
     #endregion
 
     #region 资源更新
-    IEnumerator CheckGameUpdate(bool isInternal)
+    IEnumerator CheckGameUpdate( bool isInternal )
     {
         // 检测资源更新
         Logger.Log("Resource download url : " + URLSetting.SERVER_RESOURCE_URL);
         var start = DateTime.Now;
         yield return CheckIfNeededUpdate(isInternal);
         Logger.Log(string.Format("CheckIfNeededUpdate use {0}ms", (DateTime.Now - start).Milliseconds));
-        
+
         // Unity有个Bug会给空的名字，不记得在哪个版本修复了，这里强行过滤下
-        for (int i = needDownloadList.Count - 1; i >= 0; i--)
+        for (int i = needDownloadList.Count - 1 ; i >= 0 ; i--)
         {
             if (string.IsNullOrEmpty(needDownloadList[i]))
             {
@@ -510,7 +522,7 @@ public class AssetbundleUpdater : MonoBehaviour
             yield return UpdateFinish();
             yield break;
         }
-        
+
         start = DateTime.Now;
         yield return GetDownloadAssetBundlesSize();
         Logger.Log("GetDownloadAssetBundlesSize : {0}, use {1}ms", KBSizeToString(downloadSize), (DateTime.Now - start).Milliseconds);
@@ -530,7 +542,7 @@ public class AssetbundleUpdater : MonoBehaviour
         start = DateTime.Now;
         yield return StartUpdate();
         Logger.Log(string.Format("Update use {0}ms", (DateTime.Now - start).Milliseconds));
-        
+
         slider.normalizedValue = 1.0f;
         start = DateTime.Now;
         yield return UpdateFinish();
@@ -552,7 +564,7 @@ public class AssetbundleUpdater : MonoBehaviour
         yield break;
     }
 
-    IEnumerator CheckIfNeededUpdate(bool isInternal)
+    IEnumerator CheckIfNeededUpdate( bool isInternal )
     {
         localManifest = AssetBundleManager.Instance.curManifest;
         hostManifest = new Manifest();
@@ -565,10 +577,15 @@ public class AssetbundleUpdater : MonoBehaviour
         yield return DownloadHostManifest(downloadManifestUrl, isInternal);
 
         needDownloadList = localManifest.CompareTo(hostManifest);
+        if (needDownloadList != null)
+        {
+            //
+            needDownloadList.Add(BuildUtils.ManifestBundleName);
+        }
         yield break;
     }
 
-    IEnumerator DownloadHostManifest(string downloadManifestUrl,bool isInternal)
+    IEnumerator DownloadHostManifest( string downloadManifestUrl, bool isInternal )
     {
         var request = AssetBundleManager.Instance.DownloadAssetBundleAsync(downloadManifestUrl);
         yield return request;
@@ -588,7 +605,7 @@ public class AssetbundleUpdater : MonoBehaviour
 
         var assetbundle = request.assetbundle;
         hostManifest.LoadFromAssetbundle(assetbundle);
-        hostManifest.SaveBytes(request.bytes);
+
         assetbundle.Unload(false);
         request.Dispose();
         yield break;
@@ -638,6 +655,7 @@ public class AssetbundleUpdater : MonoBehaviour
 
         foreach (var assetbundle in needDownloadList)
         {
+            if (assetbundle.Equals(BuildUtils.ManifestBundleName)) continue;
             int size = 0;
             if (!lookup.TryGetValue(assetbundle, out size))
             {
@@ -653,7 +671,7 @@ public class AssetbundleUpdater : MonoBehaviour
         downloadingRequest.Clear();
         isDownloading = true;
         hasError = false;
-        yield return new WaitUntil(()=>
+        yield return new WaitUntil(() =>
         {
             return isDownloading == false;
         });
@@ -674,29 +692,33 @@ public class AssetbundleUpdater : MonoBehaviour
         GameUtility.SafeWriteAllText(resVersionPath, serverResVersion);
         clientResVersion = serverResVersion;
         hostManifest.SaveToDiskCahce();
-        
-        // 重启资源管理器
-        yield return AssetBundleManager.Instance.Cleanup();
+
+        // 重启资源管理器 卸载之后会出现UI没有的情况，所以这里不卸载资源，只是重新初始化manfaist文件确保使用的是新的依赖文件
+        //yield return AssetBundleManager.Instance.Cleanup();
         yield return AssetBundleManager.Instance.Initialize();
 
-        // 重启Lua虚拟机
-        string luaAssetbundleName = XLuaManager.Instance.AssetbundleName;
-        AssetBundleManager.Instance.SetAssetBundleResident(luaAssetbundleName, true);
-        var abloader = AssetBundleManager.Instance.LoadAssetBundleAsync(luaAssetbundleName);
-        yield return abloader;
-        abloader.Dispose();
-        XLuaManager.Instance.Restart();
-        XLuaManager.Instance.StartHotfix();
+        //// 启动xlua热修复模块
+        //XLuaManager.Instance.Startup();
+
+
+        //// 重启Lua虚拟机
+        //Coroutine co = StartCoroutine(AssetBundleManager.Instance.PreLoadLua());
+        //yield return co;
+
+        ////XLuaManager.Instance.Restart();
+        //XLuaManager.Instance.OnInit();
+        //XLuaManager.Instance.StartHotfix();
         yield break;
     }
 
-	void Update () {
+    void Update()
+    {
         if (!isDownloading)
         {
             return;
         }
 
-        for (int i = downloadingRequest.Count - 1; i >= 0; i--)
+        for (int i = downloadingRequest.Count - 1 ; i >= 0 ; i--)
         {
             var request = downloadingRequest[i];
             if (request.isDone)
@@ -705,9 +727,9 @@ public class AssetbundleUpdater : MonoBehaviour
                 {
                     Logger.LogError("Error when downloading file : " + request.assetbundleName + "\n from url : " + request.url + "\n err : " + request.error);
                     hasError = true;
+                    downloadingRequest.RemoveAt(i);
                     needDownloadList.Add(request.assetbundleName);
-                }
-                else
+                } else
                 {
                     // TODO：是否需要显示下载流量进度？
                     Logger.Log("Finish downloading file : " + request.assetbundleName + "\n from url : " + request.url);
@@ -726,7 +748,7 @@ public class AssetbundleUpdater : MonoBehaviour
             {
                 var fileName = needDownloadList[needDownloadList.Count - 1];
                 needDownloadList.RemoveAt(needDownloadList.Count - 1);
-                var request = AssetBundleManager.Instance.DownloadAssetBundleAsync(fileName);
+                var request = AssetBundleManager.Instance.DownloadAssetFileAsync(fileName);
                 downloadingRequest.Add(request);
             }
         }
@@ -737,21 +759,20 @@ public class AssetbundleUpdater : MonoBehaviour
         }
         float progressSlice = 1.0f / totalDownloadCount;
         float progressValue = finishedDownloadCount * progressSlice;
-        for (int i = 0; i < downloadingRequest.Count; i++)
+        for (int i = 0 ; i < downloadingRequest.Count ; i++)
         {
             progressValue += (progressSlice * downloadingRequest[i].progress);
         }
         slider.normalizedValue = progressValue;
     }
 
-    private string KBSizeToString(int kbSize)
+    private string KBSizeToString( int kbSize )
     {
         string sizeStr = string.Empty;
         if (kbSize >= 1024)
         {
             sizeStr = (kbSize / 1024.0f).ToString("0.0") + "M";
-        }
-        else
+        } else
         {
             sizeStr = kbSize + "K";
         }

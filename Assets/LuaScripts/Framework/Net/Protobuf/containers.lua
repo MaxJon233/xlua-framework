@@ -48,7 +48,8 @@ _RCFC_meta.__index = _RCFC_meta
 local function RepeatedCompositeFieldContainer(listener, message_descriptor)
     local o = {
         _listener = listener,
-        _message_descriptor = message_descriptor
+        _message_descriptor = message_descriptor,
+        _is_null = false
     }
     return setmetatable(o, _RCFC_meta)
 end
@@ -73,6 +74,7 @@ local function RepeatedScalarFieldContainer(listener, type_checker)
     local o = {}
     o._listener = listener
     o._type_checker = type_checker
+    o._is_null = false
     return setmetatable(o, _RSFC_meta)
 end
 

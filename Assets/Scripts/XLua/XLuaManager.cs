@@ -19,6 +19,7 @@ using XLua;
 public class XLuaManager : MonoSingleton<XLuaManager>
 {
     public const string luaAssetbundleAssetName = "Lua";
+    public const string luaDataAssetbundleAssetName = "LuaData";
     public const string luaScriptsFolder = "LuaScripts";
     const string commonMainScriptName = "Common.Main";
     const string gameMainScriptName = "GameMain";
@@ -31,6 +32,8 @@ public class XLuaManager : MonoSingleton<XLuaManager>
         base.Init();
         string path = AssetBundleUtility.PackagePathToAssetsPath(luaAssetbundleAssetName);
         AssetbundleName = AssetBundleUtility.AssetBundlePathToAssetBundleName(path);
+        path = AssetBundleUtility.PackagePathToAssetsPath(luaDataAssetbundleAssetName);
+        ConfigDataName = AssetBundleUtility.AssetBundlePathToAssetBundleName(path);
         InitLuaEnv();
     }
 
@@ -74,14 +77,19 @@ public class XLuaManager : MonoSingleton<XLuaManager>
             }
             luaUpdater.OnInit(luaEnv);
 #if UNITY_EDITOR
-            UnityEditor.EditorApplication.playModeStateChanged -= OnEditorPalyModeChanged;
-            UnityEditor.EditorApplication.playModeStateChanged += OnEditorPalyModeChanged;
+
+            XLuaManager_EditorHelper.InitEditor(Exit);
 #endif
         }
     }
 
     public string AssetbundleName
     {
+        get;
+        protected set;
+    }
+
+    public string ConfigDataName {
         get;
         protected set;
     }
@@ -95,18 +103,7 @@ public class XLuaManager : MonoSingleton<XLuaManager>
         InitLuaEnv();
         OnInit();
     }
-#if UNITY_EDITOR
-    private void OnEditorPalyModeChanged(UnityEditor.PlayModeStateChange changed )
-    {
-        //点击编辑器停止的时候调用
-        //if(UnityEditor.EditorApplication.isPlaying == false)
-        if( changed == UnityEditor.PlayModeStateChange.ExitingPlayMode)
-        {
-            UnityEditor.EditorApplication.playModeStateChanged -= OnEditorPalyModeChanged;
-            Exit();
-        }
-    }
-#endif
+
     public void SafeDoString(string scriptContent)
     {
         if (luaEnv != null)
@@ -185,12 +182,9 @@ public class XLuaManager : MonoSingleton<XLuaManager>
             return GameUtility.SafeReadAllBytes(scriptPath);
         }
 #endif
-        //if (filepath.IndexOf("Config/Data/") == 0)
-        //{         
-        //    scriptPath = string.Format("{0}/{1}.bytes", luaDataAssetbundleAssetName, filepath);
-        //}
-        //else
-        {
+        if (filepath.IndexOf("Config/Data/") == 0) {
+            scriptPath = string.Format("{0}/{1}.bytes", luaDataAssetbundleAssetName, filepath);
+        } else {
             scriptPath = string.Format("{0}/{1}.bytes", luaAssetbundleAssetName, filepath);
         }
         string assetbundleName = null;
@@ -201,7 +195,7 @@ public class XLuaManager : MonoSingleton<XLuaManager>
             Logger.LogError("MapAssetPath failed : " + scriptPath);
             return null;
         }
-        var asset = AssetBundleManager.Instance.GetAssetCache(assetName) as TextAsset;
+        var asset = AssetBundleManager.Instance.GetLuaCache(assetName) as TextAsset;
         if (asset != null)
         {
             //Logger.Log("Load lua script : " + scriptPath);

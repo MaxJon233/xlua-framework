@@ -141,7 +141,7 @@ public static class GenConfig
 		new List<string>(){"UnityEngine.UI.Text", "OnRebuildRequested"},
 
      #if UNITY_2018_1_OR_NEWER
-		new List<string>(){"System.Type", "IsSZArray"},  
+		new List<string>(){"System.Type", "IsSZArray"},         
 	#endif
     };
 

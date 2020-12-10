@@ -6,28 +6,28 @@
 -- 3、注销一律使用xlua.hotfix
 
 local util = require "XLua.Common.util"
-local AssetbundleUpdater = CS.AssetbundleUpdater
-local AssetBundleManager = CS.AssetBundles.AssetBundleManager
+-- local AssetbundleUpdater = CS.AssetbundleUpdater
+-- local AssetBundleManager = CS.AssetBundles.AssetBundleManager
 
-xlua.private_accessible(AssetbundleUpdater)
-xlua.private_accessible(AssetBundleManager)
+-- xlua.private_accessible(AssetbundleUpdater)
+-- xlua.private_accessible(AssetBundleManager)
 
-local function AssetbundleUpdaterTestHotfix(self)
-	print("********** AssetbundleUpdater : Call TestHotfix in lua...<<<")
-end
+-- local function AssetbundleUpdaterTestHotfix(self)
+-- 	print("********** AssetbundleUpdater : Call TestHotfix in lua...<<<")
+-- end
 
-local function AssetBundleManagerTestHotfix(self)
-	print("********** AssetBundleManager : Call TestHotfix in lua...<<<")
-	AssetBundleManager.Instance:TestHotfix()
-end
+-- local function AssetBundleManagerTestHotfix(self)
+-- 	print("********** AssetBundleManager : Call TestHotfix in lua...<<<")
+-- 	AssetBundleManager.Instance:TestHotfix()
+-- end
 
 local function Register()
-	xlua.hotfix(AssetbundleUpdater, "TestHotfix", AssetbundleUpdaterTestHotfix)
+	-- xlua.hotfix(AssetbundleUpdater, "TestHotfix", AssetbundleUpdaterTestHotfix)
 	-- util.hotfix_ex(AssetBundleManager, "TestHotfix", AssetBundleManagerTestHotfix)
 end
 
 local function Unregister()
-	xlua.hotfix(AssetbundleUpdater, "TestHotfix", nil)
+	-- xlua.hotfix(AssetbundleUpdater, "TestHotfix", nil)
 	-- xlua.hotfix(AssetBundleManager, "TestHotfix", nil)
 end
 

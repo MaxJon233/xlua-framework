@@ -1,10 +1,10 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Networking;
 using XLua;
 
 /// <summary>
-/// added by wsh @ 2017.12.22
-/// 功能：资源异步请求，本地、远程通杀
+/// 功能：资源异步请求，只支持远程服务器下载更新
 /// 注意：
 /// 1、Unity5.3官方建议用UnityWebRequest取代WWW：https://unity3d.com/cn/learn/tutorials/topics/best-practices/assetbundle-fundamentals?playlist=30089
 /// 2、这里还是采用WWW，因为UnityWebRequest的Bug无数：
@@ -18,42 +18,52 @@ using XLua;
 
 namespace AssetBundles
 {
+    public class MyCertificateHandler : CertificateHandler
+    {
+        protected override bool ValidateCertificate( byte[] certificateData )
+        {
+            return true;
+        }
+    }
+
     [Hotfix]
     [LuaCallCSharp]
     public class ResourceWebRequester : ResourceAsyncOperation
     {
         static Queue<ResourceWebRequester> pool = new Queue<ResourceWebRequester>();
         static int sequence = 0;
-        protected WWW www = null;
+        protected UnityWebRequest www = null;
         protected bool isOver = false;
-
+        protected DownloadHandler downloadHandler = null;
+        protected MyCertificateHandler cerHandler = null;
         public static ResourceWebRequester Get()
         {
             if (pool.Count > 0)
             {
                 return pool.Dequeue();
-            }
-            else
+            } else
             {
                 return new ResourceWebRequester(++sequence);
             }
         }
 
-        public static void Recycle(ResourceWebRequester creater)
+        public static void Recycle( ResourceWebRequester creater )
         {
             pool.Enqueue(creater);
         }
 
-        public ResourceWebRequester(int sequence)
+        public ResourceWebRequester( int sequence )
         {
             Sequence = sequence;
         }
 
-        public void Init(string name, string url, bool noCache = false)
+        public void Init( string name, string url, DownloadHandler downloadHandler, bool noCache = false )
         {
             assetbundleName = name;
             this.url = url;
             this.noCache = noCache;
+            this.downloadHandler = downloadHandler;
+            this.cerHandler = new MyCertificateHandler();
             www = null;
             isOver = false;
         }
@@ -86,7 +96,8 @@ namespace AssetBundles
         {
             get
             {
-                return www.assetBundle;
+                DownloadHandlerAssetBundle downloadHandler = (DownloadHandlerAssetBundle)www.downloadHandler;
+                return downloadHandler.assetBundle; ;
             }
         }
 
@@ -94,7 +105,7 @@ namespace AssetBundles
         {
             get
             {
-                return www.bytes;
+                return www.downloadHandler.data;
             }
         }
 
@@ -102,7 +113,7 @@ namespace AssetBundles
         {
             get
             {
-                return www.text;
+                return www.downloadHandler.text;
             }
         }
 
@@ -112,6 +123,7 @@ namespace AssetBundles
             {
                 // 注意：不能直接判空
                 // 详见：https://docs.unity3d.com/530/Documentation/ScriptReference/WWW-error.html
+                if (www == null) return " error";
                 return string.IsNullOrEmpty(www.error) ? null : www.error;
             }
         }
@@ -123,26 +135,32 @@ namespace AssetBundles
 
         public void Start()
         {
-            www = new WWW(url);
+            www = new UnityWebRequest(url);
             if (www == null)
             {
                 Logger.LogError("New www failed!!!");
                 isOver = true;
-            }
-            else
+            } else
             {
-                //Logger.Log("Downloading : " + url);
+                www.useHttpContinue = true;
+                www.chunkedTransfer = false;
+                www.timeout = 300;
+                www.certificateHandler = this.cerHandler;
+                if (this.downloadHandler != null)
+                {
+                    www.downloadHandler = downloadHandler;
+                    www.SendWebRequest();
+                }
             }
         }
-        
+
         public override float Progress()
         {
             if (isDone)
             {
                 return 1.0f;
             }
-
-            return www != null ? www.progress : 0f;
+            return www != null ? www.downloadProgress : 0f;
         }
 
         public override void Update()
@@ -151,17 +169,23 @@ namespace AssetBundles
             {
                 return;
             }
-            
-            isOver = www != null && (www.isDone || !string.IsNullOrEmpty(www.error));
+            //error check
+            if (www != null && !string.IsNullOrEmpty(www.error))
+            {
+                Logger.LogError(www.url + ":" + www.error);
+                isOver = true;
+                return;
+            }
+
+            //download check
+            isOver = www != null && (www.downloadHandler.isDone);
+
             if (!isOver)
             {
                 return;
             }
 
-            if (www != null && !string.IsNullOrEmpty(www.error))
-            {
-                Logger.LogError(www.error);
-            }
+
         }
 
         public override void Dispose()

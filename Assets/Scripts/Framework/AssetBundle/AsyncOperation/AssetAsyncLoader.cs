@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 using XLua;
 
 /// <summary>
@@ -16,7 +18,9 @@ namespace AssetBundles
         static Queue<AssetAsyncLoader> pool = new Queue<AssetAsyncLoader>();
         static int sequence = 0;
         protected bool isOver = false;
+        protected bool isAsync = false;
         protected BaseAssetBundleAsyncLoader assetbundleLoader = null;
+        protected AssetBundleRequest assetBundleRequest = null;
 
         public static AssetAsyncLoader Get()
         {
@@ -40,12 +44,13 @@ namespace AssetBundles
             Sequence = sequence;
         }
 
-        public void Init(string assetName, UnityEngine.Object asset)
+        public void Init(string assetName, UnityEngine.Object asset,bool isAsync = true)
         {
-            AssetName = assetName;
+            this.AssetName = assetName;
             this.asset = asset;
-            assetbundleLoader = null;
-            isOver = true;
+            this.assetbundleLoader = null;
+            this.isOver = true;
+            this.isAsync = isAsync;
         }
 
         public int Sequence
@@ -54,10 +59,15 @@ namespace AssetBundles
             protected set;
         }
 
-        public void Init(string assetName, BaseAssetBundleAsyncLoader loader)
+        public void Init(string assetName,string assetPath, Type assetType, BaseAssetBundleAsyncLoader loader, bool isAsync = true)
         {
             AssetName = assetName;
+            AssetPath = assetPath;
+            AssetType = assetType;
+
             this.asset = null;
+            this.isAsync = isAsync;
+       
             isOver = false;
             assetbundleLoader = loader;
         }
@@ -67,7 +77,17 @@ namespace AssetBundles
             get;
             protected set;
         }
-        
+        public Type AssetType
+        {
+            get;
+            protected set;
+        }
+        public string AssetPath
+        {
+            get;
+            protected set;
+        }
+
         public override bool IsDone()
         {
             return isOver;
@@ -79,8 +99,16 @@ namespace AssetBundles
             {
                 return 1.0f;
             }
+            if(isAsync && assetBundleRequest != null)
+            {
+                return assetBundleRequest.progress * 0.8f+ assetbundleLoader.progress * 0.2f;
+            }
+            else
+            {
+                return assetbundleLoader.progress;
+            }
+            
 
-            return assetbundleLoader.progress;
         }
 
         public override void Update()
@@ -89,22 +117,49 @@ namespace AssetBundles
             {
                 return;
             }
+            var assetPath = AssetBundleUtility.PackagePathToAssetsPath(AssetName);
 
-            isOver = assetbundleLoader.isDone;
-            if (!isOver)
+            if (this.isAsync)
             {
-                return;
+                //异步LoadAssetAsync
+                if (assetbundleLoader.isDone)
+                {
+                    if(assetBundleRequest == null)
+                    {
+                        assetBundleRequest = assetbundleLoader.assetbundle.LoadAssetAsync(assetPath, AssetType);
+                    }
+                    else
+                    {
+                        isOver = assetBundleRequest.isDone;
+                        if (isOver)
+                        {
+                            asset = assetBundleRequest.asset;
+                            assetbundleLoader.Dispose();
+                        }
+                    }
+                }
             }
-
-            asset = AssetBundleManager.Instance.GetAssetCache(AssetName);
-            assetbundleLoader.Dispose();
+            else
+            {
+                //同步LoadAsset
+                isOver = assetbundleLoader.isDone;
+                if (isOver)
+                {
+                    asset = assetbundleLoader.assetbundle.LoadAsset(assetPath, AssetType);
+                    assetbundleLoader.Dispose();
+                }
+                
+            }
         }
 
         public override void Dispose()
         {
             isOver = true;
             AssetName = null;
+            AssetPath = null;
+            AssetType = null;
             asset = null;
+            assetBundleRequest = null;
             Recycle(this);
         }
     }
