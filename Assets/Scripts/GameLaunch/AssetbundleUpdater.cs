@@ -47,6 +47,7 @@ public class AssetbundleUpdater : MonoBehaviour
 
 #if UNITY_EDITOR || CLIENT_DEBUG
     // Hotfix测试---用于测试热更模块的热修复
+    [LuaCallCSharp]
     public void TestHotfix()
     {
         Logger.Log("********** AssetbundleUpdater : Call TestHotfix in cs...");
@@ -149,6 +150,7 @@ public class AssetbundleUpdater : MonoBehaviour
         CustomDataStruct.Helper.Startup();
         UINoticeTip.Instance.DestroySelf();
         Destroy(gameObject, 0.5f);
+
         yield break;
     }
     #endregion

@@ -256,7 +256,7 @@ public class GameUtility
         }
     }
 
-    public static void DeleteDirectory(string dirPath)
+    public static void DeleteDirectory(string dirPath,bool conRoot = true)
     {
         string[] files = Directory.GetFiles(dirPath);
         string[] dirs = Directory.GetDirectories(dirPath);
@@ -271,8 +271,46 @@ public class GameUtility
         {
             DeleteDirectory(dir);
         }
+        if(conRoot)
+        {
+            Directory.Delete(dirPath, false);
+        }
+    }
 
-        Directory.Delete(dirPath, false);
+    public static void CopyFolder(string srcPath, string tarPath)
+    {
+        if (!Directory.Exists(srcPath))
+        {
+            Directory.CreateDirectory(srcPath);
+        }
+        if (!Directory.Exists(tarPath))
+        {
+            Directory.CreateDirectory(tarPath);
+        }
+	    CopyFile(srcPath, tarPath);
+        string[] directionName = Directory.GetDirectories(srcPath);
+        foreach (string dirPath in directionName)
+        {
+            string directionPathTemp = Path.Combine(tarPath, dirPath.Substring(srcPath.Length + 1)); 
+            CopyFolder(dirPath, directionPathTemp);
+        }
+
+    }
+    public static void CopyFile(string srcPath, string tarPath)
+    {
+        string[] filesList = Directory.GetFiles(srcPath);
+        foreach (string f in filesList)
+        {
+            string fTarPath = Path.Combine(tarPath, f.Substring(srcPath.Length + 1));
+            if (File.Exists(fTarPath))
+            {
+                File.Copy(f, fTarPath, true);
+            }
+            else
+            {
+                File.Copy(f, fTarPath);
+            }       
+        }
     }
 
     public static bool SafeClearDir(string folderPath)
@@ -298,7 +336,7 @@ public class GameUtility
         }
     }
 
-    public static bool SafeDeleteDir(string folderPath)
+    public static bool SafeDeleteDir(string folderPath,bool con_root = true)
     {
         try
         {
@@ -309,7 +347,7 @@ public class GameUtility
 
             if (Directory.Exists(folderPath))
             {
-                DeleteDirectory(folderPath);
+                DeleteDirectory(folderPath, con_root);
             }
             return true;
         }

@@ -23,3 +23,7 @@ Temp/
 Assets/Plugins/Android/
 Assets/Plugins/Android.meta
 obj/
+Assets/XLua/Gen/
+Assets/XLua/Gen.meta
+Assets/AssetsPackage/LuaData/
+Assets/AssetsPackage/LuaData.meta

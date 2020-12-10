@@ -53,6 +53,7 @@ public class XLuaManager : MonoSingleton<XLuaManager>
         {
             luaEnv.AddLoader(CustomLoader);
             luaEnv.AddBuildin("pb", XLua.LuaDLL.Lua.LoadPb);
+            luaEnv.AddBuildin("cjson", XLua.LuaDLL.Lua.LoadRapidJson);
         }
         else
         {
@@ -72,6 +73,10 @@ public class XLuaManager : MonoSingleton<XLuaManager>
                 luaUpdater = gameObject.AddComponent<LuaUpdater>();
             }
             luaUpdater.OnInit(luaEnv);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.playModeStateChanged -= OnEditorPalyModeChanged;
+            UnityEditor.EditorApplication.playModeStateChanged += OnEditorPalyModeChanged;
+#endif
         }
     }
 
@@ -90,7 +95,18 @@ public class XLuaManager : MonoSingleton<XLuaManager>
         InitLuaEnv();
         OnInit();
     }
-
+#if UNITY_EDITOR
+    private void OnEditorPalyModeChanged(UnityEditor.PlayModeStateChange changed )
+    {
+        //点击编辑器停止的时候调用
+        //if(UnityEditor.EditorApplication.isPlaying == false)
+        if( changed == UnityEditor.PlayModeStateChange.ExitingPlayMode)
+        {
+            UnityEditor.EditorApplication.playModeStateChanged -= OnEditorPalyModeChanged;
+            Exit();
+        }
+    }
+#endif
     public void SafeDoString(string scriptContent)
     {
         if (luaEnv != null)
@@ -159,14 +175,24 @@ public class XLuaManager : MonoSingleton<XLuaManager>
 #if UNITY_EDITOR
         if (AssetBundleConfig.IsEditorMode)
         {
+#if Encode4Editor
+            scriptPath = Path.Combine(Application.dataPath, "LuaScriptsEncode");
+#else
             scriptPath = Path.Combine(Application.dataPath, luaScriptsFolder);
+#endif
             scriptPath = Path.Combine(scriptPath, filepath);
-            //Logger.Log("Load lua script : " + scriptPath);
+           // Logger.Log("Load lua script : " + scriptPath);
             return GameUtility.SafeReadAllBytes(scriptPath);
         }
 #endif
-
-        scriptPath = string.Format("{0}/{1}.bytes", luaAssetbundleAssetName, filepath);
+        //if (filepath.IndexOf("Config/Data/") == 0)
+        //{         
+        //    scriptPath = string.Format("{0}/{1}.bytes", luaDataAssetbundleAssetName, filepath);
+        //}
+        //else
+        {
+            scriptPath = string.Format("{0}/{1}.bytes", luaAssetbundleAssetName, filepath);
+        }
         string assetbundleName = null;
         string assetName = null;
         bool status = AssetBundleManager.Instance.MapAssetPath(scriptPath, out assetbundleName, out assetName);
@@ -191,28 +217,36 @@ public class XLuaManager : MonoSingleton<XLuaManager>
         {
             luaEnv.Tick();
 
-            if (Time.frameCount % 100 == 0)
-            {
-                luaEnv.FullGc();
-            }
+            //因为性能为最好在切换场景的时候清理
+            //if (Time.frameCount % 100 == 0)
+            //{
+            //    luaEnv.FullGc();
+            //}
         }
     }
 
-    private void OnLevelWasLoaded()
-    {
-        if (luaEnv != null && HasGameStart)
-        {
-            SafeDoString("GameMain.OnLevelWasLoaded()");
-        }
-    }
 
     private void OnApplicationQuit()
+    {
+        Exit();
+    }
+    private void Exit()
     {
         if (luaEnv != null && HasGameStart)
         {
             SafeDoString("GameMain.OnApplicationQuit()");
+            HasGameStart = false;
         }
     }
+
+    //private void OnApplicationPause(bool pause)
+    //{
+    //    if (luaEnv != null)
+    //    {
+    //        string command = pause ? "GameMain.OnApplicationPause(true)": "GameMain.OnApplicationPause(false)";     
+    //        SafeDoString(command);
+    //    }
+    //}
 
     public override void Dispose()
     {

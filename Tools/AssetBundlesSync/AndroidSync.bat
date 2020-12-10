@@ -1,0 +1,1 @@
+python syncres.py ../../AssetBundles/Android/Android/AssetBundles dev Android

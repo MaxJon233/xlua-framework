@@ -77,7 +77,7 @@ namespace AssetBundles
         public void TestHotfix()
         {
 #if UNITY_EDITOR || CLIENT_DEBUG
-            Logger.Log("********** AssetBundleManager : Call TestHotfix in cs...");
+            //Logger.Log("********** AssetBundleManager : Call TestHotfix in cs...");
 #endif
         }
 

@@ -10,6 +10,8 @@ using System;
 /// @by wsh 2017-12-28
 /// </summary>
 
+[LuaCallCSharp]
+[ReflectionUse]
 public static class UnityEngineObjectExtention
 {
     // 说明：lua侧判Object为空全部使用这个函数

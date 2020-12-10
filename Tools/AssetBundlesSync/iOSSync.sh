@@ -1,0 +1,1 @@
+python syncres.py "../../AssetBundles/iOS/iOS/AssetBundles" dev iOS

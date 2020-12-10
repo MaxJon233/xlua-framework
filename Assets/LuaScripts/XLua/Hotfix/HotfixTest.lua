@@ -23,12 +23,12 @@ end
 
 local function Register()
 	xlua.hotfix(AssetbundleUpdater, "TestHotfix", AssetbundleUpdaterTestHotfix)
-	util.hotfix_ex(AssetBundleManager, "TestHotfix", AssetBundleManagerTestHotfix)
+	-- util.hotfix_ex(AssetBundleManager, "TestHotfix", AssetBundleManagerTestHotfix)
 end
 
 local function Unregister()
 	xlua.hotfix(AssetbundleUpdater, "TestHotfix", nil)
-	xlua.hotfix(AssetBundleManager, "TestHotfix", nil)
+	-- xlua.hotfix(AssetBundleManager, "TestHotfix", nil)
 end
 
 return {
